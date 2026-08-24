@@ -16,10 +16,8 @@ namespace ProjetoFinal
         private string combustivel;
         private NBioAPI.Type.HFIR hCapturedFIR;
         private string cardToken;
-        private string apiKey = "$aact_MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6Ojg2OGExNDI4LTllZGYtNDZiZS05Mzc0LWYyYTFhOTNhNTgxMTo6JGFhY2hfYjk3YzA3ZDUtZWFkNi00NmQxLWIwOGEtOTZiNWNjODYwMTUy";
-        private string baseUrl = "https://api-sandbox.asaas.com/v3/";
-        // private string remoteIp = "187.122.39.204";
-
+        private readonly string apiKey = ConfigHelper.GetRequiredSetting("AsaasAccessToken");
+        private readonly string baseUrl = ConfigHelper.GetSetting("AsaasBaseUrl", "https://api-sandbox.asaas.com/v3");
 
         public ConfirmarPagamentoForm(string customerId, decimal valor, string combustivel, NBioAPI.Type.HFIR hCapturedFIR)
         {
@@ -29,7 +27,6 @@ namespace ProjetoFinal
             this.combustivel = combustivel;
             this.hCapturedFIR = hCapturedFIR;
 
-            // Configurar tela cheia
             this.WindowState = FormWindowState.Maximized;
             this.FormBorderStyle = FormBorderStyle.None;
             this.Bounds = Screen.PrimaryScreen.Bounds;
@@ -54,7 +51,6 @@ namespace ProjetoFinal
             uint ret = m_NBioAPI.EnumerateDevice(out nNumDevice, out nDeviceID, out deviceInfoEx);
             if (ret == NBioAPI.Error.NONE)
             {
-                // Adicione seu código de configuração aqui
             }
             else
             {
@@ -78,7 +74,6 @@ namespace ProjetoFinal
                     return;
                 }
 
-                // Capturar digital para verificação
                 NBioAPI.Type.HFIR hCapturedFIR;
                 ret = m_NBioAPI.Capture(NBioAPI.Type.FIR_PURPOSE.VERIFY, out hCapturedFIR, NBioAPI.Type.TIMEOUT.DEFAULT, null, null);
                 if (ret != NBioAPI.Error.NONE)
@@ -88,7 +83,6 @@ namespace ProjetoFinal
                     return;
                 }
 
-                // Verificar e prosseguir com o pagamento
                 VerificarUsuarioEProcessarPagamento(hCapturedFIR);
             }
             catch (Exception ex)
@@ -105,7 +99,7 @@ namespace ProjetoFinal
             NBioAPI.Type.FIR_TEXTENCODE textFIR;
             m_NBioAPI.GetTextFIRFromHandle(hCapturedFIR, out textFIR, true);
 
-            using (var conn = new OracleConnection("User Id=system;Password=093003;Data Source=DESKTOP-KHKU2NH:1521/FREE;Pooling=true;Min Pool Size=1;Max Pool Size=10;Connection Lifetime=120;"))
+            using (var conn = new OracleConnection(ConfigHelper.GetOracleConnectionString()))
             {
                 conn.Open();
                 string query = "SELECT CUSTOMER_ID, TEXTDATA, CARD_TOKEN FROM CLIENTES";
@@ -180,7 +174,7 @@ namespace ProjetoFinal
                 if (!string.IsNullOrEmpty(result))
                 {
                     MessageBox.Show($"Pagamento realizado com sucesso! Valor: R$ {valor}, Combustível: {combustivel}.");
-                    // Voltar para o formulário Inicio após sucesso no pagamento
+
                     Inicio inicioForm = new Inicio();
                     inicioForm.Show();
                     this.Hide();
@@ -203,18 +197,16 @@ namespace ProjetoFinal
             var request = new RestRequest("", Method.Post);
             request.AddHeader("accept", "application/json");
             request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("User-Agent", "MeuProjetoFinal"); // Substitua pelo nome da sua aplicação
+            request.AddHeader("User-Agent", "BiometricPaymentSystem");
             request.AddHeader("access_token", apiKey);
-            //request.AddHeader("X-Forwarded-For", "187.122.39.204"); // Adicionar o IP público diretamente no cabeçalho
 
             var body = new
             {
                 customer = customerId,
                 billingType = "CREDIT_CARD",
                 value = valor,
-                dueDate = DateTime.Now.ToString("yyyy-MM-dd"), // Data de vencimento definida automaticamente para o dia atual
+                dueDate = DateTime.Now.ToString("yyyy-MM-dd"),
                 creditCardToken = cardToken,
-                // remoteIp = remoteIp,
                 authorizeOnly = false
             };
 
@@ -230,7 +222,7 @@ namespace ProjetoFinal
             }
             else
             {
-                throw new Exception("Erro ao processar pagamento: " + response.StatusDescription + "\nDetalhes: " + responseData);
+                throw new Exception("Erro ao processar pagamento: " + response.StatusDescription);
             }
         }
 

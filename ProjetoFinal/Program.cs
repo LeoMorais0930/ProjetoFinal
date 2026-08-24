@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Windows.Forms;
 
 namespace ProjetoFinal
@@ -14,7 +14,7 @@ namespace ProjetoFinal
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Inicializar o formulário Inicio
+            // Inicializar o formulï¿½rio Inicio
             Application.Run(new Inicio());
         }
     }

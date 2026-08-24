@@ -12,15 +12,15 @@ namespace ProjetoFinal
     {
         private NBioAPI m_NBioAPI;
         private string uniqueId;
-        private string apiKey = "$aact_MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6Ojg2OGExNDI4LTllZGYtNDZiZS05Mzc0LWYyYTFhOTNhNTgxMTo6JGFhY2hfYjk3YzA3ZDUtZWFkNi00NmQxLWIwOGEtOTZiNWNjODYwMTUy"; // Insira sua chave de API do Sandbox aqui
-        private string baseUrl = "https://api-sandbox.asaas.com/v3/"; // URL correta para o ambiente de produção
+        private readonly string apiKey = ConfigHelper.GetRequiredSetting("AsaasAccessToken");
+        private readonly string baseUrl = ConfigHelper.GetSetting("AsaasBaseUrl", "https://api-sandbox.asaas.com/v3");
 
         public CadCus(string uniqueId)
         {
             InitializeComponent();
             this.uniqueId = uniqueId;
             InitializeNBioBSP();
-            // Adicionar essas linhas para tela cheia
+
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
         }
@@ -57,7 +57,7 @@ namespace ProjetoFinal
             uint ret;
             if (comboBoxDispositivo.SelectedItem != null && comboBoxDispositivo.SelectedItem.ToString() != "Auto_Detect")
             {
-                short deviceID = (short)(comboBoxDispositivo.SelectedIndex - 1); // Ajustar índice para Auto_Detect
+                short deviceID = (short)(comboBoxDispositivo.SelectedIndex - 1);
                 ret = m_NBioAPI.OpenDevice(deviceID);
                 if (ret == NBioAPI.Error.NONE)
                 {
@@ -86,7 +86,6 @@ namespace ProjetoFinal
         {
             try
             {
-                // Capturar digital para verificação
                 NBioAPI.Type.HFIR hCapturedFIR;
                 uint ret = m_NBioAPI.Capture(NBioAPI.Type.FIR_PURPOSE.VERIFY, out hCapturedFIR, NBioAPI.Type.TIMEOUT.DEFAULT, null, null);
                 if (ret != NBioAPI.Error.NONE)
@@ -95,7 +94,6 @@ namespace ProjetoFinal
                     return;
                 }
 
-                // Verificar usuário no banco de dados pela digital capturada
                 string uniqueId = VerificarUsuario(hCapturedFIR);
                 if (!string.IsNullOrEmpty(uniqueId))
                 {
@@ -108,10 +106,9 @@ namespace ProjetoFinal
                     {
                         string customerId = await CriarClienteAsync(nome, email, cpfCnpj);
                         SalvarClienteNoBancoDeDados(uniqueId, customerId, nome, sobrenome, email, cpfCnpj);
-                        MessageBox.Show("Cliente cadastrado com sucesso! ID do Cliente: " + customerId);
-                        // Fecha o formulário após salvar o cliente
+                        MessageBox.Show("Cliente cadastrado com sucesso!");
                         this.Close();
-                        // Abre o próximo formulário (CadCartao)
+
                         CadCartao cadCartaoForm = new CadCartao(customerId);
                         cadCartaoForm.Show();
                     }
@@ -134,7 +131,7 @@ namespace ProjetoFinal
         {
             try
             {
-                using (OracleConnection conn = new OracleConnection("User Id=system;Password=093003;Data Source=DESKTOP-KHKU2NH:1521/FREE;Pooling=true;Min Pool Size=1;Max Pool Size=10;Connection Lifetime=120;"))
+                using (OracleConnection conn = new OracleConnection(ConfigHelper.GetOracleConnectionString()))
                 {
                     conn.Open();
                     using (OracleCommand cmd = new OracleCommand("SELECT UNIQUE_ID, TEXTDATA FROM CLIENTES", conn))
@@ -144,9 +141,7 @@ namespace ProjetoFinal
                         {
                             string uniqueId = reader.GetString(0);
                             string storedFIRText = reader.GetString(1);
-                            // Criar FIR_TEXTENCODE a partir da string armazenada
                             NBioAPI.Type.FIR_TEXTENCODE textFIR = new NBioAPI.Type.FIR_TEXTENCODE { TextFIR = storedFIRText };
-                            // Verificar digital capturada com digital armazenada no servidor
                             bool result;
                             NBioAPI.Type.FIR_PAYLOAD myPayload = new NBioAPI.Type.FIR_PAYLOAD();
                             uint ret = m_NBioAPI.VerifyMatch(hCapturedFIR, textFIR, out result, myPayload);
@@ -169,12 +164,11 @@ namespace ProjetoFinal
         {
             var options = new RestClientOptions(baseUrl + "/customers");
             var client = new RestClient(options);
-            var request = new RestRequest("", Method.Post); // Especificar o método POST corretamente
+            var request = new RestRequest("", Method.Post);
             request.AddHeader("accept", "application/json");
             request.AddHeader("Content-Type", "application/json");
-            request.AddHeader("User-Agent", "MeuProjetoFinal"); // Substitua pelo nome da sua aplicação
+            request.AddHeader("User-Agent", "BiometricPaymentSystem");
             request.AddHeader("access_token", apiKey);
-            // request.AddHeader("X-Forwarded-For", "187.122.39.204"); // Adicionar o IP público diretamente no cabeçalho
 
             var jsonBody = new
             {
@@ -184,9 +178,6 @@ namespace ProjetoFinal
             };
 
             request.AddJsonBody(jsonBody);
-
-            // Adicionar log para o corpo da requisição
-            Console.WriteLine("Request Body: " + JsonConvert.SerializeObject(jsonBody));
 
             var response = await client.ExecuteAsync(request);
             var responseData = response.Content;
@@ -198,11 +189,8 @@ namespace ProjetoFinal
             }
             else
             {
-                // Adicionar logs de depuração
-                MessageBox.Show("Erro ao criar cliente: " + response.StatusDescription + "\nDetalhes: " + responseData);
                 Console.WriteLine("Status Code: " + response.StatusCode);
-                Console.WriteLine("Response Content: " + responseData);
-                throw new Exception("Erro ao criar cliente: " + response.StatusDescription + "\nDetalhes: " + responseData);
+                throw new Exception("Erro ao criar cliente: " + response.StatusDescription);
             }
         }
 
@@ -210,7 +198,7 @@ namespace ProjetoFinal
         {
             try
             {
-                using (OracleConnection connection = new OracleConnection("User Id=system;Password=093003;Data Source=DESKTOP-KHKU2NH:1521/FREE;Pooling=true;Min Pool Size=1;Max Pool Size=10;Connection Lifetime=120;"))
+                using (OracleConnection connection = new OracleConnection(ConfigHelper.GetOracleConnectionString()))
                 {
                     connection.Open();
                     using (OracleCommand command = new OracleCommand("UPDATE CLIENTES SET CUSTOMER_ID = :CustomerId, NAME = :Name, SOBRENOME = :Sobrenome, EMAIL = :Email, CPF_CNPJ = :CpfCnpj WHERE UNIQUE_ID = :UniqueId", connection))
@@ -226,9 +214,9 @@ namespace ProjetoFinal
                 }
                 MessageBox.Show("Dados do cliente atualizados no banco de dados com sucesso!");
             }
-            catch (Exception ex)
+            catch
             {
-
+                MessageBox.Show("Erro ao atualizar os dados do cliente no banco de dados.");
             }
         }
 

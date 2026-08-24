@@ -14,12 +14,10 @@ namespace ProjetoFinal
             InitializeComponent();
             InitializeNBioBSP();
 
-            // Configurar tela cheia
             this.WindowState = FormWindowState.Maximized;
             this.FormBorderStyle = FormBorderStyle.None;
             this.Bounds = Screen.PrimaryScreen.Bounds;
 
-            // Configurar layout
             ConfigureLayout();
         }
 
@@ -38,7 +36,6 @@ namespace ProjetoFinal
             uint ret = m_NBioAPI.EnumerateDevice(out nNumDevice, out nDeviceID, out deviceInfoEx);
             if (ret == NBioAPI.Error.NONE)
             {
-                // Adicione seu código de configuração aqui
             }
             else
             {
@@ -48,7 +45,6 @@ namespace ProjetoFinal
 
         private void ConfigureLayout()
         {
-            // Layout configuration logic here...
         }
 
         private void AbrirQuantidadeCombustivelForm(string customerId, string combustivel)
@@ -69,7 +65,6 @@ namespace ProjetoFinal
                     return;
                 }
 
-                // Capturar digital para verificação
                 NBioAPI.Type.HFIR hCapturedFIR;
                 ret = m_NBioAPI.Capture(NBioAPI.Type.FIR_PURPOSE.VERIFY, out hCapturedFIR, NBioAPI.Type.TIMEOUT.DEFAULT, null, null);
                 if (ret != NBioAPI.Error.NONE)
@@ -79,11 +74,9 @@ namespace ProjetoFinal
                     return;
                 }
 
-                // Verificar usuário no banco de dados pela digital capturada
                 string uniqueId = VerificarUsuario(hCapturedFIR);
                 if (!string.IsNullOrEmpty(uniqueId))
                 {
-                    // Abrir o próximo formulário com o uniqueId e o combustível selecionado
                     AbrirQuantidadeCombustivelForm(uniqueId, combustivel);
                 }
                 else
@@ -127,7 +120,7 @@ namespace ProjetoFinal
         {
             try
             {
-                using (OracleConnection conn = new OracleConnection("User Id=system;Password=093003;Data Source=DESKTOP-KHKU2NH:1521/FREE;Pooling=true;Min Pool Size=1;Max Pool Size=10;Connection Lifetime=120;"))
+                using (OracleConnection conn = new OracleConnection(ConfigHelper.GetOracleConnectionString()))
                 {
                     conn.Open();
                     using (OracleCommand cmd = new OracleCommand("SELECT UNIQUE_ID, TEXTDATA FROM CLIENTES", conn))
@@ -186,4 +179,3 @@ namespace ProjetoFinal
         }
     }
 }
-

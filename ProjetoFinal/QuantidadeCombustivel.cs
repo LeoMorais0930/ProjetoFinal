@@ -11,14 +11,10 @@ namespace ProjetoFinal
     public partial class QuantidadeCombustivel : Form
     {
         private NBioAPI m_NBioAPI;
-        private string apiKey = "$aact_YTU5YTE0M2M2N2I4MTliNzk0YTI5N2U5MzdjNWZmNDQ6OjAwMDAwMDAwMDAwMDA0OTczMjc6OiRhYWNoXzIzNDQ5MTg3LTQzZjgtNDlhNS04ZDU1LTZhYjFkZmVjYzQzNw=="; // Insira sua chave de API do Sandbox aqui
-        private string baseUrl = "https://api.asaas.com/";
-        private string customerId; // Armazenar o ID do cliente
-        private string combustivel; // Armazenar o tipo de combustível
-        private string cardToken; // Armazenar o token do cartão
-        private decimal valorDecimal; // Valor temporário
+        private string customerId;
+        private string combustivel;
+        private decimal valorDecimal;
 
-        // Construtor que aceita o customerId e o combustivel como argumentos
         public QuantidadeCombustivel(string customerId, string combustivel)
         {
             InitializeComponent();
@@ -26,12 +22,10 @@ namespace ProjetoFinal
             this.combustivel = combustivel;
             InitializeNBioBSP();
 
-            // Configurar tela cheia
             this.WindowState = FormWindowState.Maximized;
             this.FormBorderStyle = FormBorderStyle.None;
             this.Bounds = Screen.PrimaryScreen.Bounds;
 
-            // Configurar layout
             ConfigureLayout();
         }
 
@@ -50,7 +44,6 @@ namespace ProjetoFinal
             uint ret = m_NBioAPI.EnumerateDevice(out nNumDevice, out nDeviceID, out deviceInfoEx);
             if (ret == NBioAPI.Error.NONE)
             {
-                // Adicione seu código de configuração aqui
             }
             else
             {
@@ -60,7 +53,6 @@ namespace ProjetoFinal
 
         private void ConfigureLayout()
         {
-            // Criação do TableLayoutPanel
             TableLayoutPanel tableLayoutPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -68,7 +60,6 @@ namespace ProjetoFinal
                 RowCount = 3
             };
 
-            // Definir porcentagem das colunas e linhas
             tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
@@ -77,7 +68,6 @@ namespace ProjetoFinal
             tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
             this.Controls.Add(tableLayoutPanel);
 
-            // Criação dos controles
             Label lblQuantidade = new Label
             {
                 Text = "Quantidade de Combustível",
@@ -102,7 +92,6 @@ namespace ProjetoFinal
             };
             btnProcessarPagamento.Click += btnProcessarPagamento_Click;
 
-            // Adicionar controles ao TableLayoutPanel
             tableLayoutPanel.Controls.Add(lblQuantidade, 1, 0);
             tableLayoutPanel.Controls.Add(textBoxValor, 1, 1);
             tableLayoutPanel.Controls.Add(btnProcessarPagamento, 1, 2);
@@ -110,10 +99,8 @@ namespace ProjetoFinal
 
         private void textBoxValor_TextChanged(object sender, EventArgs e)
         {
-            // Remover o evento para evitar loop de eventos
             textBoxValor.TextChanged -= textBoxValor_TextChanged;
 
-            // Regex para aceitar apenas inteiros
             string entrada = textBoxValor.Text;
             if (Regex.IsMatch(entrada, @"^\d+$"))
             {
@@ -126,13 +113,11 @@ namespace ProjetoFinal
 
             textBoxValor.SelectionStart = textBoxValor.Text.Length;
 
-            // Reassociar o evento
             textBoxValor.TextChanged += textBoxValor_TextChanged;
         }
 
         private void btnProcessarPagamento_Click(object sender, EventArgs e)
         {
-            // Salvar o valor temporariamente
             if (decimal.TryParse(textBoxValor.Text, out valorDecimal))
             {
                 CapturarDigitalParaVerificacao();
@@ -154,7 +139,6 @@ namespace ProjetoFinal
                     return;
                 }
 
-                // Capturar digital para verificação
                 NBioAPI.Type.HFIR hCapturedFIR;
                 ret = m_NBioAPI.Capture(NBioAPI.Type.FIR_PURPOSE.VERIFY, out hCapturedFIR, NBioAPI.Type.TIMEOUT.DEFAULT, null, null);
                 if (ret != NBioAPI.Error.NONE)
@@ -164,8 +148,6 @@ namespace ProjetoFinal
                     return;
                 }
 
-                // Se a digital for verificada, prosseguir para o próximo formulário
-                // Passar o combustível selecionado corretamente
                 ConfirmarPagamentoForm confirmarPagamentoForm = new ConfirmarPagamentoForm(customerId, valorDecimal, combustivel, hCapturedFIR);
                 confirmarPagamentoForm.Show();
                 this.Hide();
@@ -213,7 +195,7 @@ namespace ProjetoFinal
         {
             try
             {
-                using (OracleConnection conn = new OracleConnection("User Id=system;Password=093003;Data Source=DESKTOP-KHKU2NH:1521/FREE;Pooling=true;Min Pool Size=1;Max Pool Size=10;Connection Lifetime=120;"))
+                using (OracleConnection conn = new OracleConnection(ConfigHelper.GetOracleConnectionString()))
                 {
                     conn.Open();
                     return true;

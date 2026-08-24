@@ -16,7 +16,7 @@ namespace ProjetoFinal
         {
             InitializeComponent();
             InitializeNBioBSP();
-            // Adicionar essas linhas para tela cheia
+
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
         }
@@ -53,7 +53,6 @@ namespace ProjetoFinal
             uint ret;
             if (comboBoxDispositivo.SelectedItem != null && comboBoxDispositivo.SelectedItem.ToString() != "Auto_Detect")
             {
-                // Fechar o dispositivo atual antes de abrir outro
                 if (currentDeviceID != -1)
                 {
                     ret = m_NBioAPI.CloseDevice(currentDeviceID);
@@ -63,8 +62,7 @@ namespace ProjetoFinal
                         return;
                     }
                 }
-                // Abrir o dispositivo selecionado
-                short deviceID = (short)(comboBoxDispositivo.SelectedIndex - 1); // Ajustar índice para Auto_Detect
+                short deviceID = (short)(comboBoxDispositivo.SelectedIndex - 1);
                 ret = m_NBioAPI.OpenDevice(deviceID);
                 if (ret == NBioAPI.Error.NONE)
                 {
@@ -78,7 +76,6 @@ namespace ProjetoFinal
             }
             else
             {
-                // Auto detectar o dispositivo
                 ret = m_NBioAPI.OpenDevice(NBioAPI.Type.DEVICE_ID.AUTO);
                 if (ret == NBioAPI.Error.NONE)
                 {
@@ -98,34 +95,25 @@ namespace ProjetoFinal
             ret = m_NBioAPI.Enroll(out hNewFIR, null);
             if (ret == NBioAPI.Error.NONE)
             {
-                // Enroll success
                 MessageBox.Show("Cadastro de impressão digital realizado com sucesso!");
 
-                // Get binary encoded FIR data
                 NBioAPI.Type.FIR biFIR;
                 m_NBioAPI.GetFIRFromHandle(hNewFIR, out biFIR);
 
-                // Get text encoded FIR data
                 NBioAPI.Type.FIR_TEXTENCODE textFIR;
                 m_NBioAPI.GetTextFIRFromHandle(hNewFIR, out textFIR, true);
 
-                // Generate a unique identifier (like a GUID) to associate with this fingerprint
                 string uniqueId = Guid.NewGuid().ToString();
-
-                // Hash da impressão digital
                 string hashDigital = GerarHash(textFIR.TextFIR);
 
-                // Save the fingerprint data to the database with the unique identifier and hash
                 SaveFingerprintDataToDatabase(uniqueId, hashDigital, biFIR, textFIR);
 
-                // Após o cadastro bem-sucedido da digital, abrir o formulário CadCus
                 CadCus cadCusForm = new CadCus(uniqueId);
                 cadCusForm.Show();
                 this.Hide();
             }
             else
             {
-                // Enroll failed
                 MessageBox.Show("Falha ao cadastrar a impressão digital: " + ret.ToString());
             }
         }
@@ -148,7 +136,7 @@ namespace ProjetoFinal
         {
             try
             {
-                using (OracleConnection connection = new OracleConnection("User Id=system;Password=093003;Data Source=DESKTOP-KHKU2NH:1521/FREE;Pooling=true;Min Pool Size=1;Max Pool Size=10;Connection Lifetime=120;"))
+                using (OracleConnection connection = new OracleConnection(ConfigHelper.GetOracleConnectionString()))
                 {
                     connection.Open();
                     using (OracleCommand command = new OracleCommand("INSERT INTO CLIENTES (UNIQUE_ID, TEXTDATA, TEXTDATA_HASH, BINARYDATA) VALUES (:UniqueId, :TextData, :TextDataHash, :BinaryData)", connection))
